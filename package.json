@@ -1,10 +1,11 @@
 {
   "name": "chitchat",
   "version": "1.0.0",
-  "description": "A full-stack AI chatbot built with React, Node.js, and Python — powered by Claude AI. Clean, modular architecture for learning and extending conversational AI development.",
+  "description": "A full-stack AI chatbot built with React and Node.js — powered by Claude AI. Clean, modular architecture for learning and extending conversational AI development.",
   "main": "index.js",
   "scripts": {
-    "test": "echo \"Error: no test specified\" && exit 1"
+    "test": "echo \"Error: no test specified\" && exit 1",
+    "test:pricing": "node server/tests/test_pricing.js"
   },
   "repository": {
     "type": "git",
@@ -19,11 +20,14 @@
   },
   "homepage": "https://github.com/lillieharlow/ChitChat#readme",
   "dependencies": {
-    "@anthropic-ai/sdk": "^0.93.0",
+    "@anthropic-ai/sdk": "^0.94.0",
     "cheerio": "^1.2.0",
     "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
     "pdf-parse": "^2.4.5"
+  },
+  "devDependencies": {
+    "prettier": "^3.8.3"
   }
 }

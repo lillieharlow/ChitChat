@@ -58,6 +58,15 @@ live website.
 Always prefer fresh, source-based information over relying on your training data
 for anything time-sensitive.
 
+Only use tools when the question is clearly about current or source-specific
+information. For general NDIS explanations, answer directly without calling a
+tool.
+
+IMPORTANT: After you use a tool and receive the results, ALWAYS answer the
+user's question directly using the information you found. Do not loop or call
+tools multiple times for the same question. Give a friendly, clear answer using
+the tool results you received.
+
 WHAT YOU HELP WITH:
 - Explaining what the NDIS is and how it works
 - The three support budget categories:
@@ -140,6 +149,12 @@ const TOOLS = [
     },
   },
 ];
+
+function shouldUseTools(message) {
+  return /\b(current|latest|today|this year|pricing|price|rate|rates|cost|costs|hourly|line item|support worker|ndis website|policy|garden|gardener|yard|mow|mowing|lawn|household|cleaning)\b/i.test(
+    message,
+  );
+}
 
 async function loadPricingIndex() {
   try {
@@ -335,6 +350,8 @@ app.post("/chat", async (req, res) => {
       return res.status(400).json({ error: "Message is required." });
     }
 
+    const useTools = shouldUseTools(message);
+
     // Build the starting messages — same as before
     let messages = [...history, { role: "user", content: message.trim() }];
 
@@ -352,7 +369,7 @@ app.post("/chat", async (req, res) => {
     // something unexpected happens.
     // ----------------------------------------------------------
 
-    const MAX_TOOL_ROUNDS = 5;
+    const MAX_TOOL_ROUNDS = 2;
     let rounds = 0;
     let finalReply = null;
 
@@ -363,7 +380,7 @@ app.post("/chat", async (req, res) => {
         model: "claude-sonnet-4-5",
         max_tokens: 1024,
         system: NDIS_SYSTEM_PROMPT,
-        tools: TOOLS,
+        tools: useTools ? TOOLS : undefined,
         messages,
       });
 
@@ -419,3 +436,6 @@ app.post("/chat", async (req, res) => {
 app.listen(PORT, () => {
   console.log(`✅ ChitChat server running on http://localhost:${PORT}`);
 });
+
+// Export for testing (unit tests can import `getPricingInfo` directly)
+export { getPricingInfo };
