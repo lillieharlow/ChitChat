@@ -8,12 +8,24 @@ import express from "express";
 import cors from "cors";
 import dotenv from "dotenv";
 import * as cheerio from "cheerio";
+import { PDFParse } from "pdf-parse";
+import { readFile } from "node:fs/promises";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 
 dotenv.config();
 
 const app = express();
 const PORT = process.env.PORT || 3001;
 const client = new Anthropic();
+const __filename = fileURLToPath(import.meta.url);
+const __dirname = path.dirname(__filename);
+const PRICING_PDF_PATH = path.join(
+  __dirname,
+  "..",
+  "NDIS Pricing Arrangements and Price Limits 2025-26.pdf",
+);
+const PRICING_INDEX_PROMISE = loadPricingIndex();
 
 app.use(cors());
 app.use(express.json());
@@ -38,11 +50,13 @@ from ndis.gov.au. Use it whenever a question involves:
 - Recent policy changes
 - Any information that may have changed recently
 
-Always prefer fetching fresh information over relying on your training data for
-anything time-sensitive.
+You also have access to a tool called get_pricing_info that searches the local
+NDIS pricing PDF. Use it first when the user asks about hourly rates, pricing
+limits, or pricing line items, especially if the answer is not obvious from the
+live website.
 
-CURRENT NDIS PRICING (from the official NDIS Support Catalogue — update this section when the NDIS releases a new price guide):
-[PASTE SUPPORT WORKER HOURLY RATES HERE — e.g. Weekday daytime: $XX.XX/hr, Saturday: $XX.XX/hr, etc.]
+Always prefer fresh, source-based information over relying on your training data
+for anything time-sensitive.
 
 WHAT YOU HELP WITH:
 - Explaining what the NDIS is and how it works
@@ -107,7 +121,102 @@ const TOOLS = [
       required: ["url"],
     },
   },
+  {
+    name: "get_pricing_info",
+    description:
+      "Searches the local NDIS pricing PDF for hourly rates, line items, and " +
+      "other pricing details. Use this first for pricing questions, then use " +
+      "fetch_ndis_page if you need to confirm a current live page.",
+    input_schema: {
+      type: "object",
+      properties: {
+        query: {
+          type: "string",
+          description:
+            "A short description of the pricing information to look up.",
+        },
+      },
+      required: ["query"],
+    },
+  },
 ];
+
+async function loadPricingIndex() {
+  try {
+    const pdfBuffer = await readFile(PRICING_PDF_PATH);
+    const parser = new PDFParse({ data: pdfBuffer });
+    const result = await parser.getText();
+    await parser.destroy();
+
+    const normalizedText = result.text.replace(/\r\n/g, "\n");
+    const lines = normalizedText
+      .split("\n")
+      .map((line) => line.trim())
+      .filter(Boolean);
+
+    return {
+      text: normalizedText,
+      lines,
+      totalPages: result.total ?? null,
+    };
+  } catch (error) {
+    console.error("Could not load pricing PDF:", error);
+    return null;
+  }
+}
+
+function buildPricingSnippets(pricingIndex, query) {
+  const normalizedQuery = query.toLowerCase().trim();
+  const keywords = normalizedQuery
+    .split(/[^a-z0-9]+/)
+    .filter((word) => word.length > 2);
+
+  if (keywords.length === 0) {
+    return [];
+  }
+
+  const scoredMatches = pricingIndex.lines
+    .map((line, index) => {
+      const lowerLine = line.toLowerCase();
+      const score = keywords.reduce(
+        (total, keyword) => total + (lowerLine.includes(keyword) ? 1 : 0),
+        0,
+      );
+
+      return { index, line, score };
+    })
+    .filter((item) => item.score > 0)
+    .sort((left, right) => right.score - left.score || left.index - right.index)
+    .slice(0, 8);
+
+  return scoredMatches.map((item) => {
+    const start = Math.max(0, item.index - 1);
+    const end = Math.min(pricingIndex.lines.length, item.index + 2);
+    return pricingIndex.lines.slice(start, end).join(" ");
+  });
+}
+
+async function getPricingInfo(query) {
+  const pricingIndex = await PRICING_INDEX_PROMISE;
+
+  if (!pricingIndex) {
+    return "The local pricing PDF could not be loaded, so I could not search it.";
+  }
+
+  const snippets = buildPricingSnippets(pricingIndex, query);
+
+  if (snippets.length === 0) {
+    return (
+      "I could not find a clear match in the local pricing PDF for: " +
+      `${query}. Try a more specific support type, line item, or weekday/weekend rate.`
+    );
+  }
+
+  return [
+    `Matched local pricing PDF for: ${query}`,
+    ...snippets.map((snippet, index) => `${index + 1}. ${snippet}`),
+  ].join("\n");
+}
 
 // ============================================================
 // FETCH TOOL IMPLEMENTATION
@@ -131,8 +240,9 @@ async function fetchNdisPage(url) {
     headers: {
       // Mimic a real browser — government sites with Cloudflare protection
       // reject requests that don't look like they come from a browser
-      "User-Agent": "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
-      "Accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
+      "User-Agent":
+        "Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36",
+      Accept: "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8",
       "Accept-Language": "en-AU,en;q=0.9",
       "Cache-Control": "no-cache",
     },
@@ -149,7 +259,9 @@ async function fetchNdisPage(url) {
   const $ = cheerio.load(html);
 
   // Remove parts of the page that aren't useful content
-  $("nav, header, footer, script, style, .menu, .breadcrumb, .sidebar").remove();
+  $(
+    "nav, header, footer, script, style, .menu, .breadcrumb, .sidebar",
+  ).remove();
 
   // Try to grab the main content area; fall back to the whole body
   const content =
@@ -183,6 +295,9 @@ async function runTools(toolUseBlocks) {
       if (toolUse.name === "fetch_ndis_page") {
         console.log(`Fetching: ${toolUse.input.url}`);
         content = await fetchNdisPage(toolUse.input.url);
+      } else if (toolUse.name === "get_pricing_info") {
+        console.log(`Searching pricing PDF: ${toolUse.input.query}`);
+        content = await getPricingInfo(toolUse.input.query);
       } else {
         content = "Unknown tool requested.";
       }
@@ -221,10 +336,7 @@ app.post("/chat", async (req, res) => {
     }
 
     // Build the starting messages — same as before
-    let messages = [
-      ...history,
-      { role: "user", content: message.trim() },
-    ];
+    let messages = [...history, { role: "user", content: message.trim() }];
 
     // ----------------------------------------------------------
     // THE AGENTIC LOOP
@@ -259,11 +371,10 @@ app.post("/chat", async (req, res) => {
         // Claude is done — find the text block in its response
         const textBlock = response.content.find((b) => b.type === "text");
         finalReply = textBlock?.text ?? "I wasn't able to generate a response.";
-
       } else if (response.stop_reason === "tool_use") {
         // Claude wants to call a tool before answering
         const toolUseBlocks = response.content.filter(
-          (b) => b.type === "tool_use"
+          (b) => b.type === "tool_use",
         );
 
         // Step 1: Add Claude's response to the conversation
@@ -278,13 +389,9 @@ app.post("/chat", async (req, res) => {
 
         // Step 3: Add the results back as a user message
         // (the Anthropic API uses role "user" for tool results)
-        messages = [
-          ...messages,
-          { role: "user", content: toolResults },
-        ];
+        messages = [...messages, { role: "user", content: toolResults }];
 
         // Loop again — Claude will now read the results and respond
-
       } else {
         // Unexpected stop reason — bail out safely
         finalReply = "I wasn't able to complete my response. Please try again.";
@@ -299,7 +406,6 @@ app.post("/chat", async (req, res) => {
     }
 
     res.json({ reply: finalReply });
-
   } catch (error) {
     console.error("Error in /chat:", error);
     res.status(500).json({ error: "Something went wrong. Please try again." });
