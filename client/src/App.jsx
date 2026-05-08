@@ -8,8 +8,10 @@
 import { useState } from 'react';
 import ChatWindow from './components/ChatWindow';
 import ChatInput from './components/ChatInput';
+import { styles } from './styles';
 
-const API_URL = 'http://localhost:3001/chat';
+// Falls back to localhost for development. Set REACT_APP_API_URL in production.
+const API_URL = process.env.REACT_APP_API_URL || 'http://localhost:3001/chat';
 
 export default function App() {
   // ----------------------------------------------------------
@@ -66,7 +68,6 @@ export default function App() {
 
       const data = await response.json();
       setMessages([...updatedMessages, { role: 'assistant', content: data.reply }]);
-
     } catch (err) {
       console.error('Chat error:', err);
       setError('Something went wrong. Please check your connection and try again.');
@@ -83,24 +84,21 @@ export default function App() {
   // ----------------------------------------------------------
 
   return (
-    <div className="h-screen overflow-hidden bg-gray-50 flex flex-col items-center justify-center p-4">
+    <div className={styles.appWrapper}>
       <main
-        className="w-full max-w-2xl bg-white rounded-2xl shadow-lg flex flex-col h-[80vh]"
+        className={styles.appCard}
         aria-label="ChitChat NDIS Assistant"
       >
-        <header className="px-6 py-4 border-b border-gray-100">
-          <h1 className="text-xl font-semibold text-gray-800">ChitChat</h1>
-          <p className="text-sm text-gray-500">Your NDIS assistant</p>
+        <header className={styles.appHeader}>
+          <h1 className={styles.appTitle}>ChitChat</h1>
+          <p className={styles.appSubtitle}>Your NDIS assistant</p>
         </header>
 
         <ChatWindow messages={messages} isLoading={isLoading} />
 
-        {/* role="alert" means screen readers announce this immediately when it appears */}
+        {/* role="alert" announces this immediately to screen readers when it appears */}
         {error && (
-          <div
-            role="alert"
-            className="px-6 py-2 text-sm text-red-600 bg-red-50 border-t border-red-100"
-          >
+          <div role="alert" className={styles.errorBanner}>
             {error}
           </div>
         )}

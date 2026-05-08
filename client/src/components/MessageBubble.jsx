@@ -8,6 +8,7 @@
 // headings render properly instead of showing raw symbols.
 
 import ReactMarkdown from 'react-markdown';
+import { styles } from '../styles';
 
 export default function MessageBubble({ message }) {
   const isUser = message.role === 'user';
@@ -15,13 +16,13 @@ export default function MessageBubble({ message }) {
   return (
     <div className={`flex mb-3 ${isUser ? 'justify-end' : 'justify-start'}`}>
       <div
-        aria-label={`${isUser ? 'You' : 'ChitChat'}: ${message.content}`}
-        className={`max-w-[80%] px-4 py-2 rounded-2xl text-sm leading-relaxed ${
-          isUser
-            ? 'bg-indigo-600 text-white rounded-br-sm'
-            : 'bg-gray-100 text-gray-800 rounded-bl-sm'
+        className={`${styles.messageBubble} rounded-2xl ${
+          isUser ? styles.userMessage : styles.assistantMessage
         }`}
       >
+        {/* sr-only span attributes the message to a speaker for screen readers.
+            This is more reliable than aria-label on a div (which has no role). */}
+        <span className={styles.srOnly}>{isUser ? 'You:' : 'ChitChat:'}</span>
         {isUser ? (
           message.content
         ) : (
@@ -29,13 +30,15 @@ export default function MessageBubble({ message }) {
           // without needing a separate typography plugin
           <ReactMarkdown
             components={{
-              p:      ({ children }) => <p className="mb-2 last:mb-0">{children}</p>,
-              strong: ({ children }) => <strong className="font-semibold">{children}</strong>,
-              ul:     ({ children }) => <ul className="list-disc list-inside space-y-1 my-1">{children}</ul>,
-              ol:     ({ children }) => <ol className="list-decimal list-inside space-y-1 my-1">{children}</ol>,
-              li:     ({ children }) => <li>{children}</li>,
-              h2:     ({ children }) => <h2 className="font-semibold mt-3 mb-1">{children}</h2>,
-              h3:     ({ children }) => <h3 className="font-medium mt-2 mb-1">{children}</h3>,
+              p: ({ children }) => <p className={styles.markdown.p}>{children}</p>,
+              strong: ({ children }) => (
+                <strong className={styles.markdown.strong}>{children}</strong>
+              ),
+              ul: ({ children }) => <ul className={styles.markdown.ul}>{children}</ul>,
+              ol: ({ children }) => <ol className={styles.markdown.ol}>{children}</ol>,
+              li: ({ children }) => <li className={styles.markdown.li}>{children}</li>,
+              h2: ({ children }) => <h2 className={styles.markdown.h2}>{children}</h2>,
+              h3: ({ children }) => <h3 className={styles.markdown.h3}>{children}</h3>,
             }}
           >
             {message.content}

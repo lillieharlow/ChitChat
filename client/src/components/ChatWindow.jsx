@@ -15,6 +15,7 @@
 
 import { useEffect, useRef } from 'react';
 import MessageBubble from './MessageBubble';
+import { styles } from '../styles';
 
 export default function ChatWindow({ messages, isLoading }) {
   const bottomRef = useRef(null);
@@ -25,17 +26,8 @@ export default function ChatWindow({ messages, isLoading }) {
   }, [messages, isLoading]);
 
   return (
-    <div
-      role="log"
-      aria-label="Conversation"
-      aria-live="polite"
-      className="flex-1 overflow-y-auto px-6 py-4"
-    >
-      {messages.length === 0 && (
-        <p className="text-center text-gray-400 text-sm mt-8">
-          Ask me anything about the NDIS
-        </p>
-      )}
+    <div role="log" aria-label="Conversation" aria-live="polite" className={styles.chatWindow}>
+      {messages.length === 0 && <p className={styles.emptyState}>Ask me anything about the NDIS</p>}
 
       {messages.map((message, index) => (
         <MessageBubble key={index} message={message} />
@@ -43,15 +35,18 @@ export default function ChatWindow({ messages, isLoading }) {
 
       {isLoading && (
         <div className="flex justify-start mb-3">
-          <div className="bg-gray-100 px-4 py-3 rounded-2xl rounded-bl-sm">
-            {/* sr-only text is read by screen readers; the dots are hidden from them */}
-            <span className="sr-only" aria-live="assertive">
-              ChitChat is typing
-            </span>
+          <div className={`${styles.typingIndicator} px-4 py-3 rounded-2xl`}>
+            {/* sr-only text is announced by the parent role="log" region (polite).
+                Removed aria-live="assertive" here — nesting assertive inside polite
+                causes double-announcements on VoiceOver and NVDA. */}
+            <span className={styles.srOnly}>ChitChat is typing</span>
+            {/* aria-hidden keeps the visual dots out of the accessibility tree.
+                motion-reduce:animate-none stops the bounce for users with
+                vestibular disorders (prefers-reduced-motion media query). */}
             <div aria-hidden="true" className="flex gap-1 items-center h-4">
-              <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:0ms]" />
-              <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:150ms]" />
-              <span className="w-2 h-2 bg-gray-400 rounded-full animate-bounce [animation-delay:300ms]" />
+              <span className="w-2 h-2 bg-gray-600 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:0ms]" />
+              <span className="w-2 h-2 bg-gray-600 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:150ms]" />
+              <span className="w-2 h-2 bg-gray-600 rounded-full animate-bounce motion-reduce:animate-none [animation-delay:300ms]" />
             </div>
           </div>
         </div>

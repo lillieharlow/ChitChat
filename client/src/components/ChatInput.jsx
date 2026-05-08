@@ -14,10 +14,20 @@
 //     and updates to "Sending…" while loading.
 //   - disabled state on both input and button prevents double-submit.
 
-import { useState } from 'react';
+import { useState, useRef, useEffect } from 'react';
+import { styles } from '../styles';
 
 export default function ChatInput({ onSend, isLoading }) {
   const [value, setValue] = useState('');
+  const textareaRef = useRef(null);
+
+  // Return focus to the textarea when loading finishes so keyboard users
+  // don't get stranded on the disabled Send button after submitting.
+  useEffect(() => {
+    if (!isLoading) {
+      textareaRef.current?.focus();
+    }
+  }, [isLoading]);
 
   const handleSubmit = (e) => {
     e.preventDefault();
@@ -35,16 +45,14 @@ export default function ChatInput({ onSend, isLoading }) {
   };
 
   return (
-    <form
-      onSubmit={handleSubmit}
-      className="px-4 py-4 border-t border-gray-100"
-    >
+    <form onSubmit={handleSubmit} className={styles.chatForm}>
       <div className="flex gap-2 items-end">
         {/* htmlFor links this label to the textarea below */}
-        <label htmlFor="chat-input" className="sr-only">
+        <label htmlFor="chat-input" className={styles.srOnly}>
           Type your message
         </label>
         <textarea
+          ref={textareaRef}
           id="chat-input"
           value={value}
           onChange={(e) => setValue(e.target.value)}
@@ -52,13 +60,13 @@ export default function ChatInput({ onSend, isLoading }) {
           disabled={isLoading}
           placeholder="Ask about the NDIS…"
           rows={1}
-          className="flex-1 resize-none rounded-xl border border-gray-200 px-4 py-2 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-500 disabled:opacity-50"
+          className={`${styles.textarea} resize-none rounded-xl`}
         />
         <button
           type="submit"
           disabled={isLoading || !value.trim()}
           aria-label={isLoading ? 'Sending message' : 'Send message'}
-          className="shrink-0 bg-indigo-600 text-white px-4 py-2 rounded-xl text-sm font-medium hover:bg-indigo-700 disabled:opacity-50 disabled:cursor-not-allowed focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:ring-offset-2 transition-colors"
+          className={`${styles.sendButton} shrink-0 rounded-xl focus:outline-none focus:ring-2 focus:ring-sage-600 focus:ring-offset-2`}
         >
           {isLoading ? 'Sending…' : 'Send'}
         </button>
