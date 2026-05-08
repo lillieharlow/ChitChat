@@ -44,9 +44,9 @@ User (React) → POST /chat → Express server → Claude API (with tools) → r
 
 The React frontend (`client/src/App.jsx`) sends `{ message, history }` to `http://localhost:3001/chat`. The full conversation history is sent each request — there is no server-side session state.
 
-### Agentic tool loop (`server/index.js`)
+### Agentic tool loop (`server/services/claudeService.js`)
 
-The backend runs an autonomous loop (max `MAX_TOOL_ROUNDS = 2`) where Claude can call tools before returning a final reply:
+The backend runs an autonomous loop (max `MAX_ITERATIONS = 5`) where Claude can call tools before returning a final reply:
 
 1. `shouldUseTools()` — regex matches keywords in the user message to decide whether to offer tools at all
 2. Claude receives tool definitions and chooses whether/which to call
@@ -73,6 +73,6 @@ App.jsx           — state (messages, loading), fetch logic, API_URL
 ## Key config
 
 - `ANTHROPIC_API_KEY` in `.env` at repo root (single required env var)
-- Model: `claude-sonnet-4-5` (set in `server/index.js`)
+- Model: `claude-sonnet-4-5` (set in `server/services/claudeService.js`)
 - Frontend proxies nothing — it calls `http://localhost:3001` directly; both processes must be running for the UI to work
 - Tailwind config is in `client/tailwind.config.js`; scans `./src/**/*.{js,jsx,ts,tsx}`

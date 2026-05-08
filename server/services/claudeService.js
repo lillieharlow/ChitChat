@@ -122,6 +122,11 @@ const TOOLS = [
   },
 ];
 
+// Keyword gate — avoids sending tool definitions to Claude for every message,
+// which reduces token usage and prevents Claude from over-using tools on
+// simple questions it can answer from training alone.
+// Add keywords here whenever Claude should be prompted to use a tool for a
+// new topic (e.g. new support types, policy areas users frequently ask about).
 function shouldUseTools(message) {
   return /\b(current|latest|today|this year|pricing|price|rate|rates|cost|costs|hourly|line item|support worker|ndis website|policy|garden|gardener|yard|mow|mowing|lawn|household|cleaning)\b/i.test(
     message,

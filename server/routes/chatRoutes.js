@@ -1,3 +1,5 @@
+// chatRoutes.js — mounts the /chat route with validation → controller pipeline.
+
 import { Router } from "express";
 import validateChat from "../middleware/validateChat.js";
 import chatController from "../controllers/chatController.js";

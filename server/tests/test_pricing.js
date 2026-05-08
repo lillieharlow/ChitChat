@@ -1,3 +1,9 @@
+// test_pricing.js — smoke test for the PDF pricing search tool.
+// Runs a set of sample queries against the indexed PDF and prints results
+// to the console so you can verify keyword matching is working correctly.
+//
+// Run with:  npm run test:pricing
+
 import { getPricingInfo } from "../index.js";
 
 async function run() {

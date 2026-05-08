@@ -1,3 +1,7 @@
+// validateChat.js — request validation middleware for the /chat route.
+// Rejects requests missing a non-empty string message before they reach
+// the Claude service, keeping error handling out of the controller.
+
 const validateChat = (req, res, next) => {
   const { message } = req.body;
 

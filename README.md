@@ -2,6 +2,61 @@
 
 A full-stack agentic AI chatbot specialized for the **National Disability Insurance Scheme (NDIS)**. Built with React, Node.js, and Claude Sonnet 4.5, ChitChat helps NDIS participants, families, carers, and support workers understand scheme rules, funding categories, pricing, and support services in plain, accessible language.
 
+## Getting Started
+
+### Prerequisites
+
+- Node.js 18+
+- An Anthropic API key — [get one at console.anthropic.com](https://console.anthropic.com/)
+
+### Setup
+
+```bash
+# Install backend dependencies (from repo root)
+npm install
+
+# Install frontend dependencies
+cd client && npm install
+```
+
+Create a `.env` file in the repo root:
+
+```
+ANTHROPIC_API_KEY=your_key_here
+```
+
+### Running
+
+Two processes must run simultaneously:
+
+```bash
+# Backend — runs on port 3001 (from repo root)
+node server/index.js
+
+# Frontend — runs on port 3000 (from client/)
+cd client && npm start
+```
+
+Then open `http://localhost:3000` in your browser.
+
+### Testing & tooling
+
+```bash
+# Frontend component tests (Jest + React Testing Library)
+cd client && npm test
+
+# Pricing PDF search smoke test
+npm run test:pricing
+
+# Lint all JS/JSX
+npm run lint
+
+# Auto-format with Prettier
+npm run format
+```
+
+---
+
 ## Key Features
 
 ### Agentic Tool Use
